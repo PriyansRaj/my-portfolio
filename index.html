@@ -19,6 +19,7 @@
   --red: #ff6b6b;
   --mono: 'IBM Plex Mono', monospace;
   --sans: 'IBM Plex Sans', sans-serif;
+  --wrap-max: clamp(920px, 88vw, 1360px);
 }
 *{ margin:0; padding:0; box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
@@ -42,6 +43,15 @@ body{
 }
 nav, .hero, section, footer{ position:relative; z-index:1; }
 
+/* scroll progress bar */
+#scroll-progress{
+  position:fixed; top:0; left:0; height:2.5px; width:0%;
+  background:linear-gradient(90deg, var(--amber), var(--cyan));
+  z-index:300;
+  box-shadow:0 0 8px rgba(255,180,84,0.6);
+  transition:width 0.08s linear;
+}
+
 /* scanline texture */
 body::before{
   content:"";
@@ -62,9 +72,14 @@ a{ color:inherit; text-decoration:none; }
 .mono{ font-family:var(--mono); }
 
 /* ---------- layout shells ---------- */
-.wrap{ max-width:920px; margin:0 auto; padding:0 28px; }
+.wrap{ max-width:var(--wrap-max); margin:0 auto; padding:0 28px; }
 section{ padding:120px 0; border-bottom:1px solid var(--line); }
 section:last-of-type{ border-bottom:none; }
+
+@media(min-width:1500px){
+  section{ padding:150px 0; }
+  .about-grid{ gap:90px; }
+}
 
 .eyebrow{
   font-family:var(--mono);
@@ -95,11 +110,25 @@ nav{
 nav .wrap{ display:flex; align-items:center; justify-content:space-between; padding:16px 28px; }
 .logo{
   font-family:var(--mono); font-weight:600; font-size:15px; color:var(--text);
+  position:relative; cursor:default;
 }
 .logo span{ color:var(--amber); }
+.logo:hover{ animation:glitch 0.35s steps(2,end) 2; }
+@keyframes glitch{
+  0%{ transform:translate(0,0); text-shadow:none; }
+  20%{ transform:translate(-1.5px,1px); text-shadow:1.5px 0 var(--cyan), -1.5px 0 var(--red); }
+  40%{ transform:translate(1.5px,-1px); text-shadow:-1.5px 0 var(--cyan), 1.5px 0 var(--red); }
+  60%{ transform:translate(-1px,0); text-shadow:1px 0 var(--red), -1px 0 var(--cyan); }
+  100%{ transform:translate(0,0); text-shadow:none; }
+}
 .navlinks{ display:flex; gap:28px; font-family:var(--mono); font-size:13px; color:var(--text-dim); }
 .navlinks a{ transition:color 0.15s; position:relative; }
+.navlinks a::after{
+  content:""; position:absolute; left:0; bottom:-4px; width:0%; height:1px;
+  background:var(--amber); transition:width 0.2s ease;
+}
 .navlinks a:hover{ color:var(--amber); }
+.navlinks a:hover::after{ width:100%; }
 .navlinks .num{ color:var(--text-faint); margin-right:6px; }
 @media(max-width:700px){ .navlinks{ display:none; } }
 
@@ -116,6 +145,14 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
   border-radius:8px;
   overflow:hidden;
   box-shadow:0 30px 80px -30px rgba(0,0,0,0.7);
+  animation:term-float 6s ease-in-out infinite;
+}
+@keyframes term-float{
+  0%,100%{ transform:translateY(0); }
+  50%{ transform:translateY(-6px); }
+}
+@media(prefers-reduced-motion: no-preference){
+  .term:hover{ animation-play-state:paused; }
 }
 .term-bar{
   display:flex; align-items:center; gap:8px;
@@ -145,7 +182,18 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
   color:var(--text);
   margin:4px 0 2px;
 }
-.hero-role{ color:var(--amber); }
+.hero-role{
+  background:linear-gradient(90deg, var(--amber), var(--cyan), var(--amber));
+  background-size:200% auto;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation:gradient-shift 4s linear infinite;
+}
+@keyframes gradient-shift{
+  0%{ background-position:0% center; }
+  100%{ background-position:200% center; }
+}
 .cursor-blink{
   display:inline-block; width:8px; height:16px; background:var(--amber);
   vertical-align:middle; animation:blink 1s steps(1) infinite;
@@ -178,11 +226,28 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
   border-radius:8px;
   background:var(--bg-raised);
   padding:20px;
+  transition:transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.stat-block:hover{
+  transform:translateY(-4px);
+  border-color:#31384a;
+  box-shadow:0 20px 50px -25px rgba(0,0,0,0.6);
 }
 .stat-row{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; }
 .stat-row:last-child{ border-bottom:none; }
 .stat-key{ color:var(--text-faint); }
 .stat-val{ color:var(--text); }
+.status-live{ display:inline-flex; align-items:center; gap:6px; }
+.status-dot{
+  width:7px; height:7px; border-radius:50%; background:#5ddc7c;
+  box-shadow:0 0 0 0 rgba(93,220,124,0.6);
+  animation:status-pulse 1.8s ease-out infinite;
+}
+@keyframes status-pulse{
+  0%{ box-shadow:0 0 0 0 rgba(93,220,124,0.5); }
+  70%{ box-shadow:0 0 0 7px rgba(93,220,124,0); }
+  100%{ box-shadow:0 0 0 0 rgba(93,220,124,0); }
+}
 @media(max-width:760px){ .about-grid{ grid-template-columns:1fr; } }
 
 /* ---------- skills (directory tree) ---------- */
@@ -199,10 +264,10 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
   position:relative;
   border:1px solid var(--line); border-radius:5px;
   padding:4px 10px; font-size:12.5px; color:var(--text-dim);
-  transition:border-color 0.15s, color 0.15s;
+  transition:border-color 0.15s, color 0.15s, transform 0.15s;
   cursor:default;
 }
-.chip:hover{ border-color:var(--amber); color:var(--text); }
+.chip:hover{ border-color:var(--amber); color:var(--text); transform:translateY(-2px); }
 .chip::after{
   content: attr(data-conf);
   position:absolute; left:50%; bottom:calc(100% + 8px); transform:translateX(-50%) translateY(4px);
@@ -220,9 +285,9 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
   border:1px solid var(--line); border-radius:8px;
   background:var(--bg-raised);
   overflow:hidden;
-  transition:border-color 0.2s;
+  transition:border-color 0.2s, transform 0.2s;
 }
-.proj:hover{ border-color:#31384a; }
+.proj:hover{ border-color:#31384a; transform:translateX(4px); }
 .proj-head{
   display:flex; align-items:center; justify-content:space-between;
   padding:18px 22px; cursor:pointer; gap:14px; flex-wrap:wrap;
@@ -236,7 +301,7 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
   border:1px solid var(--line); border-radius:20px; padding:2px 9px;
   flex-shrink:0; display:flex; align-items:center; gap:5px;
 }
-.proj-score .dot-bar{ width:5px; height:5px; border-radius:50%; background:var(--amber); }
+.proj-score .dot-bar{ width:5px; height:5px; border-radius:50%; background:var(--amber); animation:status-pulse 1.8s ease-out infinite; }
 .proj-toggle{
   font-family:var(--mono); color:var(--text-faint); font-size:14px;
   transition:transform 0.25s ease; flex-shrink:0;
@@ -279,6 +344,7 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
   font-family:var(--mono); font-size:13px; color:var(--amber);
   border:1px solid var(--amber); border-radius:6px; padding:10px 18px;
   transition:background 0.15s, color 0.15s;
+  position:relative; overflow:hidden;
 }
 .resume-cta:hover{ background:var(--amber); color:#0a0c10; }
 
@@ -288,6 +354,10 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
   padding:32px;
 }
 .contact-box .term-title{ margin-bottom:10px; }
+.contact-note{
+  font-family:var(--mono); font-size:12px; color:var(--text-faint);
+  margin-bottom:20px; padding:10px 12px; border:1px dashed var(--line); border-radius:5px;
+}
 .field{ margin-bottom:18px; }
 .field label{
   display:block; font-family:var(--mono); font-size:12px; color:var(--text-faint); margin-bottom:6px;
@@ -301,11 +371,19 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
 .field input:focus, .field textarea:focus{ border-color:var(--amber); }
 .field textarea{ resize:vertical; min-height:90px; }
 .send-btn{
+  position:relative; overflow:hidden;
   font-family:var(--mono); font-size:13px; color:#0a0c10; background:var(--amber);
   border:none; border-radius:5px; padding:11px 20px; cursor:pointer; font-weight:600;
-  transition:opacity 0.15s;
+  transition:opacity 0.15s, transform 0.1s;
 }
 .send-btn:hover{ opacity:0.85; }
+.send-btn:active{ transform:scale(0.97); }
+.ripple{
+  position:absolute; border-radius:50%; background:rgba(10,12,16,0.35);
+  transform:scale(0); animation:ripple-anim 0.6s ease-out;
+  pointer-events:none;
+}
+@keyframes ripple-anim{ to{ transform:scale(3); opacity:0; } }
 .contact-links{ display:flex; gap:22px; margin-top:28px; flex-wrap:wrap; }
 .contact-links a{
   font-family:var(--mono); font-size:13px; color:var(--text-dim); border-bottom:1px dashed var(--line);
@@ -331,6 +409,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 </style>
 </head>
 <body>
+<div id="scroll-progress"></div>
 <canvas id="neural-bg"></canvas>
 
 <nav>
@@ -381,7 +460,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
         <div class="stat-row"><span class="stat-key">phone</span><span class="stat-val">+91 79917 68325</span></div>
         <div class="stat-row"><span class="stat-key">cgpa</span><span class="stat-val">8.34 / 10</span></div>
         <div class="stat-row"><span class="stat-key">grad</span><span class="stat-val">2027</span></div>
-        <div class="stat-row"><span class="stat-key">status</span><span class="stat-val" style="color:#5ddc7c">open to work</span></div>
+        <div class="stat-row"><span class="stat-key">status</span><span class="stat-val status-live"><span class="status-dot"></span>open to work</span></div>
       </div>
     </div>
   </div>
@@ -451,7 +530,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     <h2 class="section-title">send ./message</h2>
     <div class="contact-box">
       <div class="term-title mono">compose_message.sh</div>
+      <div class="contact-note">✓ submitting this form sends your message to Priyans, and you'll automatically receive his resume by email in return.</div>
       <form id="contact-form" action="https://formspree.io/f/xdaqnblb" method="POST">
+        <input type="hidden" name="_subject" value="New message from portfolio contact form">
         <div class="field">
           <label for="f-name">name</label>
           <input id="f-name" name="name" type="text" placeholder="jane doe" required>
@@ -674,7 +755,43 @@ const io = new IntersectionObserver((entries) => {
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
+/* ---------------- scroll progress bar ---------------- */
+const progressBar = document.getElementById('scroll-progress');
+function updateProgress(){
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  progressBar.style.width = pct + '%';
+}
+window.addEventListener('scroll', updateProgress, { passive: true });
+updateProgress();
+
+/* ---------------- ripple effect on buttons ---------------- */
+document.querySelectorAll('.send-btn, .resume-cta').forEach(btn => {
+  btn.addEventListener('click', function(e){
+    const rect = this.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+    this.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 650);
+  });
+});
+
 /* ---------------- contact form — sends via Formspree ---------------- */
+/*
+  RESUME AUTO-REPLY SETUP (one-time, done in the Formspree dashboard — free, no code):
+  1. Open your form at formspree.io → the "xdaqnblb" form → Plugins tab.
+  2. Enable "Autoresponse". Set a subject like "Thanks for reaching out — here's my resume".
+  3. In the message body, paste a link to your resume (e.g. a Google Drive "anyone with
+     the link can view" share link, or a raw GitHub link to the PDF). Formspree will not
+     attach the file itself — it emails the submitter a message containing your link.
+  4. Formspree needs a field named "email" to know where to send it — this form already
+     has one (#f-email), so no extra code changes are needed once the plugin is on.
+*/
 document.getElementById('contact-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
@@ -692,7 +809,7 @@ document.getElementById('contact-form').addEventListener('submit', async (e) => 
       headers: { 'Accept': 'application/json' }
     });
     if (res.ok) {
-      btn.textContent = `$ sent — thanks ${name.split(' ')[0]}`;
+      btn.textContent = `$ sent — check your inbox, ${name.split(' ')[0]}`;
       form.reset();
     } else {
       btn.textContent = '$ error — try email link below';
@@ -701,7 +818,7 @@ document.getElementById('contact-form').addEventListener('submit', async (e) => 
     btn.textContent = '$ error — try email link below';
   }
 
-  setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 3000);
+  setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 3500);
 });
 
 /* ---------------- ambient neural-network background ---------------- */
