@@ -326,6 +326,8 @@ nav .wrap{ display:flex; align-items:center; justify-content:space-between; padd
 }
 .proj-links a:hover{ color:var(--amber); border-color:var(--amber); }
 .proj-links a::before{ content:"→ "; }
+.proj-links a.live{ color:var(--amber); }
+.proj-links a.live::before{ content:"● "; }
 
 /* ---------- resume / timeline ---------- */
 .timeline{ border-left:1px solid var(--line); padding-left:28px; margin-left:4px; }
@@ -568,6 +570,7 @@ const projects = [
     desc: "A production-grade serverless exam system on Microsoft Azure handling multiple concurrent exam sessions. Parses exam content straight out of uploaded PDFs via a Mammoth.js document pipeline, generates and grades questions with Azure OpenAI (GPT-4o), returns SHAP-based answer analysis in real time, and notifies candidates automatically — all deployed through a GitHub Actions CI/CD pipeline.",
     stack: ["Azure Functions","Node.js","Cosmos DB","Azure OpenAI GPT-4o","Azure Communication Services","Mammoth.js","SHAP","GitHub Actions"],
     links: [
+      { label: "live demo", url: "https://orange-bush-0284d0a00.7.azurestaticapps.net/index.html", live: true },
       { label: "frontend repo", url: "https://github.com/PriyansRaj/serverless-exam" },
       { label: "backend repo", url: "https://github.com/PriyansRaj/serverless-exam-backend" }
     ]
@@ -587,6 +590,7 @@ const projects = [
     desc: "An end-to-end ML application recommending suitable crops from soil nutrients (N, P, K), temperature, humidity, and rainfall. Covers the full pipeline — preprocessing, training, evaluation, and prediction serving — as a multi-class classifier, deployed live on Render for real-time recommendations.",
     stack: ["Python","Scikit-Learn","Flask","Pandas","NumPy","Render"],
     links: [
+      { label: "live demo", url: "https://ml-based-crop-recommendation.onrender.com/", live: true },
       { label: "repo", url: "https://github.com/PriyansRaj/ML-Based-crop-recommendation" }
     ]
   },
@@ -621,7 +625,7 @@ projects.forEach((p, i) => {
       <div class="proj-body-inner">
         <p class="proj-desc">${p.desc}</p>
         <div class="proj-stack">${p.stack.map(s => `<span class="stack-chip">${s}</span>`).join('')}</div>
-        <div class="proj-links">${(p.links || []).map(l => `<a href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`).join('')}</div>
+        <div class="proj-links">${(p.links || []).map(l => `<a class="${l.live ? 'live' : ''}" href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`).join('')}</div>
       </div>
     </div>`;
   el.querySelector('.proj-head').addEventListener('click', () => {
@@ -821,15 +825,19 @@ document.getElementById('contact-form').addEventListener('submit', async (e) => 
   setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 3500);
 });
 
-/* ---------------- ambient neural-network background ---------------- */
+/* ---------------- ambient neural-network background — mouse-reactive ---------------- */
 (function(){
   const canvas = document.getElementById('neural-bg');
   const ctx = canvas.getContext('2d');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let w, h, nodes = [];
-  const NODE_COUNT = 46;
+  const NODE_COUNT = 56;
   const LINK_DIST = 150;
-  const mouse = { x: -9999, y: -9999 };
+  const MOUSE_RADIUS = 220;      // how far the cursor's influence reaches
+  const REPEL_STRENGTH = 0.9;    // push nodes away from the cursor
+  const SWIRL_STRENGTH = 0.35;   // add a little orbital drift around the cursor
+  const RETURN_EASE = 0.02;      // pull back toward base drift speed
+  const mouse = { x: -9999, y: -9999, active: false };
 
   function resize(){
     w = canvas.width = window.innerWidth;
@@ -841,20 +849,61 @@ document.getElementById('contact-form').addEventListener('submit', async (e) => 
       y: Math.random() * h,
       vx: (Math.random() - 0.5) * 0.18,
       vy: (Math.random() - 0.5) * 0.18,
+      baseVx: 0,
+      baseVy: 0,
       pulse: Math.random() * Math.PI * 2
     }));
+    nodes.forEach(n => { n.baseVx = n.vx; n.baseVy = n.vy; });
   }
   resize();
   makeNodes();
   window.addEventListener('resize', () => { resize(); });
-  window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY + window.scrollY; });
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY + window.scrollY;
+    mouse.active = true;
+  });
+  window.addEventListener('mouseleave', () => { mouse.active = false; });
+  window.addEventListener('touchmove', (e) => {
+    if (!e.touches.length) return;
+    const t = e.touches[0];
+    mouse.x = t.clientX;
+    mouse.y = t.clientY + window.scrollY;
+    mouse.active = true;
+  }, { passive: true });
+  window.addEventListener('touchend', () => { mouse.active = false; });
 
   function step(){
     ctx.clearRect(0, 0, w, h);
     nodes.forEach(n => {
+      // gently ease velocity back toward its base ambient drift
+      n.vx += (n.baseVx - n.vx) * RETURN_EASE;
+      n.vy += (n.baseVy - n.vy) * RETURN_EASE;
+
+      if (mouse.active){
+        const dx = n.x - mouse.x, dy = n.y - mouse.y;
+        const dist = Math.sqrt(dx*dx + dy*dy) || 0.001;
+        if (dist < MOUSE_RADIUS){
+          const falloff = 1 - dist / MOUSE_RADIUS;
+          // repel outward from the cursor
+          n.vx += (dx / dist) * falloff * REPEL_STRENGTH;
+          n.vy += (dy / dist) * falloff * REPEL_STRENGTH;
+          // slight tangential swirl for a more organic reaction
+          n.vx += (-dy / dist) * falloff * SWIRL_STRENGTH;
+          n.vy += (dx / dist) * falloff * SWIRL_STRENGTH;
+        }
+      }
+
+      // cap speed so it stays a background effect, not chaos
+      const speed = Math.sqrt(n.vx*n.vx + n.vy*n.vy);
+      const maxSpeed = 2.6;
+      if (speed > maxSpeed){ n.vx = (n.vx / speed) * maxSpeed; n.vy = (n.vy / speed) * maxSpeed; }
+
       n.x += n.vx; n.y += n.vy; n.pulse += 0.02;
       if (n.x < 0 || n.x > w) n.vx *= -1;
       if (n.y < 0 || n.y > h) n.vy *= -1;
+      n.x = Math.max(0, Math.min(w, n.x));
+      n.y = Math.max(0, Math.min(h, n.y));
     });
     for (let i = 0; i < nodes.length; i++){
       for (let j = i + 1; j < nodes.length; j++){
@@ -869,15 +918,27 @@ document.getElementById('contact-form').addEventListener('submit', async (e) => 
           ctx.stroke();
         }
       }
-      const dxm = nodes[i].x - mouse.x, dym = nodes[i].y - mouse.y;
-      const dm = Math.sqrt(dxm*dxm + dym*dym);
-      if (dm < 180){
-        ctx.strokeStyle = `rgba(255,180,84,${(1 - dm / 180) * 0.35})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(mouse.x, mouse.y);
-        ctx.stroke();
+      if (mouse.active){
+        const dxm = nodes[i].x - mouse.x, dym = nodes[i].y - mouse.y;
+        const dm = Math.sqrt(dxm*dxm + dym*dym);
+        if (dm < 180){
+          ctx.strokeStyle = `rgba(255,180,84,${(1 - dm / 180) * 0.35})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(mouse.x, mouse.y);
+          ctx.stroke();
+        }
       }
+    }
+    if (mouse.active){
+      // soft glow at the cursor position so the reaction reads clearly
+      const glow = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, MOUSE_RADIUS);
+      glow.addColorStop(0, 'rgba(255,180,84,0.05)');
+      glow.addColorStop(1, 'rgba(255,180,84,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, MOUSE_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
     }
     nodes.forEach(n => {
       const r = 1.3 + Math.sin(n.pulse) * 0.6;
